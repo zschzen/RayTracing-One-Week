@@ -1,12 +1,12 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h> /* timespec, clock_gettime */
-
+#include "benchmark.h"
 #include "color.h"
 #include "vec3.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 int
 main( void )
@@ -30,16 +30,15 @@ main( void )
     // Draw
     //--------------------------------------------------------------------------------------
     {
-        struct timespec render_start;
-        clock_gettime( CLOCK_MONOTONIC, &render_start );
+        BENCHMARK_START(); // Start timing
 
         // Generate image data
         unsigned char * pixel = image_data;
         for( int j = 0; j < image_height; ++j )
             {
                 // Print progress indicator
-                fprintf( stdout, "\rScanlines remaining: %d", image_height - j );
-                fflush( stdout );
+                fprintf( stderr, "\rScanlines remaining: %d ", image_height - j );
+                fflush( stderr );
 
                 for( int i = 0; i < image_width; ++i )
                     {
@@ -59,14 +58,9 @@ main( void )
                     }
             }
 
-        // Calculate render time
-        struct timespec render_end;
-        clock_gettime( CLOCK_MONOTONIC, &render_end );
-        double render_time = (double)( render_end.tv_sec - render_start.tv_sec )
-                             + (double)( render_end.tv_nsec - render_start.tv_nsec ) / 1000000000.0;
+        fprintf( stderr, "\rDone.                             \n" );
 
-        // Rendering time
-        fprintf( stdout, "\rRendering completed in %.4f seconds\n", render_time );
+        BENCHMARK_END_PRINT( "Draw" );
     }
 
     // Output

@@ -5,8 +5,9 @@ set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 
 list(APPEND PUBLIC_HEADER_FILES
-    ${INCLUDE_DIR}/vec3.h
+    ${INCLUDE_DIR}/benchmark.h
     ${INCLUDE_DIR}/color.h
+    ${INCLUDE_DIR}/vec3.h
 )
 
 list(APPEND PRIVATE_HEADER_FILES
@@ -68,6 +69,9 @@ PROPERTIES
 target_compile_definitions(${PROJECT_NAME} PUBLIC
     # Log/Debug
     $<$<BOOL:${LOG_SUPPORT}>:LOG_SUPPORT>
+
+    # Benchmark
+    $<$<BOOL:${ENABLE_BENCHMARK}>:ENABLE_BENCHMARK>
 )
 
 #--------------------------------------------------------------------
