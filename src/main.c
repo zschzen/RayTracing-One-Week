@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <time.h> /* timespec, clock_gettime */
 
+#include "color.h"
+#include "vec3.h"
+
 int
 main( void )
 {
@@ -13,7 +16,7 @@ main( void )
     // Image dimensions
     const int image_width      = 256;
     const int image_height     = 256;
-    const int channels         = 4; // RGBA
+    const int channels         = 3; // RGB
 
     // Allocate image buffer
     const size_t    image_size = image_width * image_height * channels;
@@ -40,17 +43,19 @@ main( void )
 
                 for( int i = 0; i < image_width; ++i )
                     {
-                        // Calculate color values
-                        double r = (double)i / ( image_width - 1 );
-                        double g = (double)j / ( image_height - 1 );
-                        double b = 0.0;
-                        double a = 1.0; // Fully opaque alpha
+                        // Calculate color values (normalized to [0,1])
+                        double r          = (double)i / ( image_width - 1 );
+                        double g          = (double)j / ( image_height - 1 );
+                        double b          = 0.0;
 
-                        // Set pixel components
-                        *pixel++ = (unsigned char)( 255.999 * r ); // R
-                        *pixel++ = (unsigned char)( 255.999 * g ); // G
-                        *pixel++ = (unsigned char)( 255.999 * b ); // B
-                        *pixel++ = (unsigned char)( 255.999 * a ); // A
+                        // Create color using vec3
+                        color pixel_color = vec3_new( r, g, b );
+
+                        // Use the color.h function to write to buffer
+                        write_color_to_buffer( pixel, pixel_color );
+
+                        // Move to next pixel
+                        pixel += channels;
                     }
             }
 
