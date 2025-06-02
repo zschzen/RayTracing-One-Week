@@ -9,6 +9,7 @@ on:
       - 'cmake/**'
       - '.github/workflows/build.yml'
   pull_request:
+    branches: [ "main" ]
     paths:
       - 'include/**'
       - 'src/**'
@@ -56,12 +57,7 @@ jobs:
         xcode-select --install 2>/dev/null || true
 
     - name: Configure CMake
-      run: cmake \
-        -B "${{ github.workspace }}/build"               \
-        -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}"       \
-        -DENABLE_LOG="${{ env.ENABLE_LOG }}"             \
-        -DENABLE_BENCHMARK="${{ env.ENABLE_BENCHMARK }}"
+      run: cmake -B "${{ github.workspace }}/build" -DCMAKE_BUILD_TYPE="${{ env.BUILD_TYPE }}" -DENABLE_LOG="${{ env.ENABLE_LOG }}" -DENABLE_BENCHMARK="${{ env.ENABLE_BENCHMARK }}"
 
     - name: Build
-      run: cmake --build "${{ github.workspace }}/build" --config "${{ env.BUILD_TYPE }}" --parallel
-
+      run: cmake --build ${{ github.workspace }}/build --config ${{ env.BUILD_TYPE }} --parallel
