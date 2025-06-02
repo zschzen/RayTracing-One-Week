@@ -2,9 +2,19 @@ name: Build
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - 'include/**'
+      - 'src/**'
+      - 'CMakeOptions.cmake'
+      - 'cmake/**'
+      - '.github/workflows/build.yml'
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'include/**'
+      - 'src/**'
+      - 'CMakeOptions.cmake'
+      - 'cmake/**'
+      - '.github/workflows/build.yml'
 
 env:
   BUILD_TYPE: Release
