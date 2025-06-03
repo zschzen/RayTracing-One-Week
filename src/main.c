@@ -9,13 +9,17 @@
 #include <stdlib.h>
 
 // Constans
-#define ASPECT_RATIO ( 16.0 / 9.0 )
-#define IMAGE_WIDTH  800
+#define ASPECT_RATIO             ( 16.0 / 9.0 )
+#define IMAGE_WIDTH              800
+
+#define CHANNELS                 3
 
 // Macros
-#ifndef LERP
-#    define LERP( a, b, t ) ( ( a ) + ( ( b ) - ( a ) ) * ( t ) )
-#endif
+#define LERP( a, b, t )          ( ( a ) + ( ( b ) - ( a ) ) * ( t ) )
+
+#define MIN( a, b )              ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
+#define MAX( a, b )              ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
+#define CLAMP( x, lower, upper ) ( MIN( ( upper ), MAX( ( x ), ( lower ) ) ) )
 
 color
 ray_color( const ray * r )
@@ -42,12 +46,10 @@ main( void )
     //--------------------------------------------------------------------------------------
     // Image dimensions
     int image_height           = (int)( IMAGE_WIDTH / ASPECT_RATIO );
-    image_height               = ( image_height < 1 ) ? 1 : image_height;
-
-    const int channels         = 3; // RGB
+    image_height               = MAX( image_height, 1 );
 
     // Allocate image buffer
-    const size_t    image_size = IMAGE_WIDTH * image_height * channels;
+    const size_t    image_size = IMAGE_WIDTH * image_height * CHANNELS;
     unsigned char * image_data = (unsigned char *)malloc( image_size );
     if( !image_data )
         {
@@ -104,7 +106,7 @@ main( void )
                         write_color_to_buffer( pixel, ray_color( &r ) );
 
                         // Move to next pixel
-                        pixel += channels;
+                        pixel += CHANNELS;
                     }
             }
 
@@ -115,7 +117,7 @@ main( void )
     //--------------------------------------------------------------------------------------
     {
         const char * filename = "output.png";
-        if( !stbi_write_png( filename, IMAGE_WIDTH, image_height, channels, image_data, IMAGE_WIDTH * channels ) )
+        if( !stbi_write_png( filename, IMAGE_WIDTH, image_height, CHANNELS, image_data, IMAGE_WIDTH * CHANNELS ) )
             {
                 fprintf( stderr, "Failed to write output image\n" );
                 free( image_data );
