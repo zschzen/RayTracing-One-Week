@@ -5,6 +5,7 @@
 #include "ray.h"
 #include "vec3.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,20 +22,43 @@
 #define MAX( a, b )              ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
 #define CLAMP( x, lower, upper ) ( MIN( ( upper ), MAX( ( x ), ( lower ) ) ) )
 
+bool
+hit_sphere( const point3 * ct, double r, const ray * ray )
+{
+    //
+    // t^2(d⋅d)  −  (2td)⋅(C−Q)  +  (C−Q)⋅(C−Q) − r^2 = 0
+    //   a               b                 c
+    //
+    vec3   oc           = vec3_sub( *ct, ray_origin( ray ) );
+    double a            = vec3_dot( ray_direction( ray ), ray_direction( ray ) );
+    double b            = -2.0 * vec3_dot( ray_direction( ray ), oc );
+    double c            = vec3_dot( oc, oc ) - r * r;
+    double discriminant = b * b - 4 * a * c;
+    return ( discriminant >= 0 );
+}
+
 color
 ray_color( const ray * r )
 {
+    // Sphere
+    point3 sphere_center = vec3_new( 0.0, 0.0, -1.0 );
+    if( hit_sphere( &sphere_center, 0.5, r ) )
+        {
+            return (color) { 1.0, 0.0, 0.0 };
+        }
+
+    // Background
     vec3   unit_direction = vec3_normalize( ray_direction( r ) );
-    double a              = 0.5 * ( unit_direction.y + 1.0 );
+    double t              = 0.5 * ( unit_direction.y + 1.0 );
 
     color white           = (color) { 1.0, 1.0, 1.0 };
     color blue            = (color) { 0.5, 0.7, 1.0 };
 
     // Linear interpolation
     color result;
-    result.x = LERP( white.x, blue.x, a );
-    result.y = LERP( white.y, blue.y, a );
-    result.z = LERP( white.z, blue.z, a );
+    result.x = LERP( white.x, blue.x, t );
+    result.y = LERP( white.y, blue.y, t );
+    result.z = LERP( white.z, blue.z, t );
 
     return result;
 }
