@@ -35,13 +35,6 @@ add_executable(${PROJECT_NAME}
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC ${LINK_DEPS})
 
-# Set compile flags
-target_compile_options(${PROJECT_NAME} PRIVATE
-    $<$<OR:$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>:-Weverything>
-    $<$<C_COMPILER_ID:GNU>:-Wall -Wextra -fdiagnostics-color=always>
-    $<$<C_COMPILER_ID:MSVC>:/W4 /WX>
-)
-
 #--------------------------------------------------------------------
 # Include Directories
 #--------------------------------------------------------------------
