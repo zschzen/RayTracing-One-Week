@@ -1,7 +1,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include "benchmark.h"
 #include "color.h"
 #include "vec3.h"
 
@@ -30,8 +29,6 @@ main( void )
     // Draw
     //--------------------------------------------------------------------------------------
     {
-        BENCHMARK_START(); // Start timing
-
         // Generate image data
         unsigned char * pixel = image_data;
         for( int j = 0; j < image_height; ++j )
@@ -59,8 +56,6 @@ main( void )
             }
 
         fprintf( stderr, "\rDone.                             \n" );
-
-        BENCHMARK_END_PRINT( "Draw" );
     }
 
     // Output
