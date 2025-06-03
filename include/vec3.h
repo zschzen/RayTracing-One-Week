@@ -20,6 +20,9 @@ typedef struct
     double x, y, z;
 } vec3;
 
+// Alias for vec3. Eseful for geometric.
+typedef vec3 point3;
+
 // Constructor functions
 static inline vec3
 vec3_new( double x, double y, double z )
@@ -198,4 +201,3 @@ vec3_project( vec3 v, vec3 onto )
 }
 
 #endif // VEC3_H
-
