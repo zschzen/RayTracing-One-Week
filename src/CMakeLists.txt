@@ -6,7 +6,9 @@ set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 
 list(APPEND PUBLIC_HEADER_FILES
     ${INCLUDE_DIR}/color.h
+    ${INCLUDE_DIR}/hittable.h
     ${INCLUDE_DIR}/ray.h
+    ${INCLUDE_DIR}/sphere.h
     ${INCLUDE_DIR}/vec3.h
 )
 
@@ -16,6 +18,7 @@ list(APPEND PRIVATE_HEADER_FILES
 list(APPEND SOURCE_FILES
   # Modules
   ${SOURCE_DIR}/main.c
+  ${SOURCE_DIR}/sphere.c
 )
 
 #--------------------------------------------------------------------
