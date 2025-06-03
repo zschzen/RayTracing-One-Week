@@ -1,67 +1,64 @@
-#include <math.h>
+#include <float.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#include "color.h"
-#include "ray.h"
-#include "vec3.h"
+#include "color.h" /* typedef vec3 color, write_color_to_buffer */
+#include "ray.h"   /* ray struct, ray_create, ray_origin, ray_direction, ray_at */
+#include "vec3.h"  /* vec3/point3 struct, vec3_new, _sub, _add, _mul, _div, _length_squared, _dot, _normalize */
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-// Constans
+// Include the new C99 hittable and sphere headers
+#include "hittable.h"
+#include "sphere.h"
+
+// Constants
 #define ASPECT_RATIO             ( 16.0 / 9.0 )
 #define IMAGE_WIDTH              800
-
 #define CHANNELS                 3
 
 // Macros
 #define LERP( a, b, t )          ( ( a ) + ( ( b ) - ( a ) ) * ( t ) )
-
 #define MIN( a, b )              ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
 #define MAX( a, b )              ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
 #define CLAMP( x, lower, upper ) ( MIN( ( upper ), MAX( ( x ), ( lower ) ) ) )
 
-double
-hit_sphere( const point3 * ct, double r, const ray * ray )
-{
-    //
-    // t^2(d⋅d)  −  (2td)⋅(C−Q)  +  (C−Q)⋅(C−Q) − r^2 = 0
-    //   a               b                 c
-    //
-    vec3   oc           = vec3_sub( *ct, ray_origin( ray ) );
-    double a            = vec3_length_squared( ray_direction( ray ) );
-    double h            = vec3_dot( ray_direction( ray ), oc );
-    double c            = vec3_length_squared( oc ) - ( r * r );
-    double discriminant = ( h * h ) - ( a * c );
-
-    if( discriminant < 0 )
-        return -1.0;
-    else
-        return ( h - sqrt( discriminant ) ) / a;
-}
-
 color
 ray_color( const ray * r )
 {
-    // Sphere
+    // Scene
     {
+        hit_record rec;
+
+        // Sphere
+        sphere sphere;
         point3 sphere_center = vec3_new( 0.0, 0.0, -1.0 );
-        double t             = hit_sphere( &sphere_center, 0.5, r );
-        if( t > 0.0 )
+
+        // Initialize the sphere object
+        sphere_init( &sphere, sphere_center, 0.5 );
+
+        // Check for hits with the sphere using the hittable interface
+        // t_min = 0.001 to avoid shadow acne (self-intersection at the ray's origin)
+        // t_max = INFINITY to consider hits at any distance along the ray
+        if( sphere.base.hit( (hittable *)&sphere, r, 0.001, (double)INFINITY, &rec ) )
             {
-                // Return sphere surface normal
-                vec3 N = vec3_normalize( vec3_sub( ray_at( r, t ), (vec3) { 0.0, 0.0, -1.0 } ) );
-                return vec3_mul( (color) { N.x + 1, N.y + 1, N.z + 1 }, 0.5 );
+                // The ray hit the sphere
+                return vec3_mul( (color) { rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0 }, 0.5 );
             }
     }
 
-    // Background
+    // Background gradient
     {
         vec3   unit_direction = vec3_normalize( ray_direction( r ) );
-        double a              = 0.5 * ( unit_direction.y + 1.0 );
-        return vec3_add( vec3_mul( (color) { 1.0, 1.0, 1.0 }, 1.0 - a ), vec3_mul( (color) { 0.5, 0.7, 1.0 }, a ) );
+        double a              = 0.5 * ( unit_direction.y + 1.0 ); // LERP factor based on y-component of ray direction
+
+        // Lerp between white and blue
+        color white           = vec3_new( 1.0, 1.0, 1.0 );
+        color sky_blue        = vec3_new( 0.5, 0.7, 1.0 );
+        return vec3_add( vec3_mul( white, 1.0 - a ), vec3_mul( sky_blue, a ) );
     }
 }
 
@@ -84,59 +81,68 @@ main( void )
         }
 
     // Camera
-    double focal_length      = 1.0;
-    double viewport_height   = 2.0;
-    double viewport_width    = viewport_height * ( (double)IMAGE_WIDTH / image_height );
-    point3 camera_center     = vec3_new( 0.0, 0.0, 0.0 );
+    double focal_length    = 1.0;
+    double viewport_height = 2.0;
+    double viewport_width  = viewport_height * ( (double)IMAGE_WIDTH / image_height );
+    point3 camera_center   = vec3_new( 0.0, 0.0, 0.0 );
 
     // Viewport edge vectors
-    vec3 viewport_u          = vec3_new( viewport_width, 0.0, 0.0 );   // Horizontal edge
-    vec3 viewport_v          = vec3_new( 0.0, -viewport_height, 0.0 ); // Vertical edge (downward)
+    vec3 viewport_u        = vec3_new( viewport_width, 0.0, 0.0 );   // Horizontal edge
+    vec3 viewport_v        = vec3_new( 0.0, -viewport_height, 0.0 ); // Vertical edge (downward)
 
     // Pixel-to-pixel step vectors
-    vec3 pixel_delta_u       = vec3_div( viewport_u, IMAGE_WIDTH );  // Horizontal step
-    vec3 pixel_delta_v       = vec3_div( viewport_v, image_height ); // Vertical step
+    vec3 pixel_delta_u     = vec3_div( viewport_u, IMAGE_WIDTH );  // Horizontal step
+    vec3 pixel_delta_v     = vec3_div( viewport_v, image_height ); // Vertical step
 
     // Calculate viewport upper-left corner
-    vec3 focal_point         = vec3_new( 0.0, 0.0, focal_length );
-    vec3 viewport_center     = vec3_sub( camera_center, focal_point );
-    vec3 half_viewport_u     = vec3_div( viewport_u, 2.0 );
-    vec3 half_viewport_v     = vec3_div( viewport_v, 2.0 );
+    vec3 focal_vector = vec3_new( 0.0, 0.0, focal_length ); // Vector from camera to focal plane along view direction
 
-    vec3 viewport_upper_left = vec3_sub( vec3_sub( viewport_center, half_viewport_u ), half_viewport_v );
+    vec3   viewport_center_offset = vec3_new( 0.0, 0.0, -focal_length ); // Assuming camera at origin looks along -Z
+    point3 viewport_plane_center  = vec3_add( camera_center, viewport_center_offset );
+
+    vec3 half_viewport_u          = vec3_div( viewport_u, 2.0 );
+    vec3 half_viewport_v          = vec3_div( viewport_v, 2.0 ); // Note: viewport_v is already negative Y
+
+    // Upper-left corner of the viewport plane
+    vec3 viewport_upper_left      = vec3_sub(
+        vec3_sub( vec3_add( camera_center, vec3_new( 0, 0, -focal_length ) ), half_viewport_u ), half_viewport_v );
 
     // First pixel center location (pixel [0,0])
-    vec3 half_pixel_offset   = vec3_mul( vec3_add( pixel_delta_u, pixel_delta_v ), 0.5 );
-    vec3 pixel00_loc         = vec3_add( viewport_upper_left, half_pixel_offset );
+    vec3 half_pixel_step = vec3_mul( vec3_add( pixel_delta_u, pixel_delta_v ), 0.5 );
+    vec3 pixel00_loc     = vec3_add( viewport_upper_left, half_pixel_step );
 
     // Draw
     //--------------------------------------------------------------------------------------
     {
-        // Generate image data
         unsigned char * pixel = image_data;
         for( int j = 0; j < image_height; ++j )
             {
-                // Print progress indicator
-                fprintf( stderr, "\rScanlines remaining: %d ", image_height - j );
+                fprintf( stderr, "\rScanlines remaining: %d ", image_height - j - 1 );
                 fflush( stderr );
 
                 for( int i = 0; i < IMAGE_WIDTH; ++i )
                     {
-                        vec3 pixel_center  = vec3_add( vec3_add( pixel00_loc, vec3_mul( pixel_delta_u, i ) ),
-                                                       vec3_mul( pixel_delta_v, j ) );
+                        // Calculate current pixel's center on the viewport
+                        vec3   pixel_center_offset_u = vec3_mul( pixel_delta_u, (double)i );
+                        vec3   pixel_center_offset_v = vec3_mul( pixel_delta_v, (double)j );
+                        point3 pixel_center
+                            = vec3_add( vec3_add( pixel00_loc, pixel_center_offset_u ), pixel_center_offset_v );
 
-                        vec3 ray_direction = vec3_sub( pixel_center, camera_center );
-                        ray  r             = ray_create( camera_center, ray_direction );
+                        // Calculate ray direction from camera center to pixel center
+                        vec3 r_direction = vec3_sub( pixel_center, camera_center );
+                        ray  r           = ray_create( camera_center, r_direction );
 
-                        // Use the color.h function to write to buffer
-                        write_color_to_buffer( pixel, ray_color( &r ) );
+                        // Get color for this ray
+                        color pixel_c    = ray_color( &r );
 
-                        // Move to next pixel
-                        pixel += CHANNELS;
+                        // Write color to image buffer (write_color_to_buffer is defined in color.h/c)
+                        write_color_to_buffer( pixel, pixel_c );
+
+                        pixel += CHANNELS; // Move to the next pixel in the buffer
                     }
             }
 
-        fprintf( stderr, "\rDone.                             \n" );
+        fprintf( stderr, "\rDone.                                       \n" );
     }
 
     // Output
