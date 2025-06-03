@@ -2,10 +2,38 @@
 #include "stb_image_write.h"
 
 #include "color.h"
+#include "ray.h"
 #include "vec3.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
+// Constans
+#define ASPECT_RATIO ( 16.0 / 9.0 )
+#define IMAGE_WIDTH  800
+
+// Macros
+#ifndef LERP
+#    define LERP( a, b, t ) ( ( a ) + ( ( b ) - ( a ) ) * ( t ) )
+#endif
+
+color
+ray_color( const ray * r )
+{
+    vec3   unit_direction = vec3_normalize( ray_direction( r ) );
+    double a              = 0.5 * ( unit_direction.y + 1.0 );
+
+    color white           = (color) { 1.0, 1.0, 1.0 };
+    color blue            = (color) { 0.5, 0.7, 1.0 };
+
+    // Linear interpolation
+    color result;
+    result.x = LERP( white.x, blue.x, a );
+    result.y = LERP( white.y, blue.y, a );
+    result.z = LERP( white.z, blue.z, a );
+
+    return result;
+}
 
 int
 main( void )
@@ -13,18 +41,45 @@ main( void )
     // Initialization
     //--------------------------------------------------------------------------------------
     // Image dimensions
-    const int image_width      = 256;
-    const int image_height     = 256;
+    int image_height           = (int)( IMAGE_WIDTH / ASPECT_RATIO );
+    image_height               = ( image_height < 1 ) ? 1 : image_height;
+
     const int channels         = 3; // RGB
 
     // Allocate image buffer
-    const size_t    image_size = image_width * image_height * channels;
+    const size_t    image_size = IMAGE_WIDTH * image_height * channels;
     unsigned char * image_data = (unsigned char *)malloc( image_size );
     if( !image_data )
         {
             fprintf( stderr, "Failed to alloc memory\n" );
             return EXIT_FAILURE;
         }
+
+    // Camera
+    double focal_length      = 1.0;
+    double viewport_height   = 2.0;
+    double viewport_width    = viewport_height * ( (double)IMAGE_WIDTH / image_height );
+    point3 camera_center     = vec3_new( 0.0, 0.0, 0.0 );
+
+    // Viewport edge vectors
+    vec3 viewport_u          = vec3_new( viewport_width, 0.0, 0.0 );   // Horizontal edge
+    vec3 viewport_v          = vec3_new( 0.0, -viewport_height, 0.0 ); // Vertical edge (downward)
+
+    // Pixel-to-pixel step vectors
+    vec3 pixel_delta_u       = vec3_div( viewport_u, IMAGE_WIDTH );  // Horizontal step
+    vec3 pixel_delta_v       = vec3_div( viewport_v, image_height ); // Vertical step
+
+    // Calculate viewport upper-left corner
+    vec3 focal_point         = vec3_new( 0.0, 0.0, focal_length );
+    vec3 viewport_center     = vec3_sub( camera_center, focal_point );
+    vec3 half_viewport_u     = vec3_div( viewport_u, 2.0 );
+    vec3 half_viewport_v     = vec3_div( viewport_v, 2.0 );
+
+    vec3 viewport_upper_left = vec3_sub( vec3_sub( viewport_center, half_viewport_u ), half_viewport_v );
+
+    // First pixel center location (pixel [0,0])
+    vec3 half_pixel_offset   = vec3_mul( vec3_add( pixel_delta_u, pixel_delta_v ), 0.5 );
+    vec3 pixel00_loc         = vec3_add( viewport_upper_left, half_pixel_offset );
 
     // Draw
     //--------------------------------------------------------------------------------------
@@ -37,18 +92,16 @@ main( void )
                 fprintf( stderr, "\rScanlines remaining: %d ", image_height - j );
                 fflush( stderr );
 
-                for( int i = 0; i < image_width; ++i )
+                for( int i = 0; i < IMAGE_WIDTH; ++i )
                     {
-                        // Calculate color values (normalized to [0,1])
-                        double r          = (double)i / ( image_width - 1 );
-                        double g          = (double)j / ( image_height - 1 );
-                        double b          = 0.0;
+                        vec3 pixel_center  = vec3_add( vec3_add( pixel00_loc, vec3_mul( pixel_delta_u, i ) ),
+                                                       vec3_mul( pixel_delta_v, j ) );
 
-                        // Create color using vec3
-                        color pixel_color = vec3_new( r, g, b );
+                        vec3 ray_direction = vec3_sub( pixel_center, camera_center );
+                        ray  r             = ray_create( camera_center, ray_direction );
 
                         // Use the color.h function to write to buffer
-                        write_color_to_buffer( pixel, pixel_color );
+                        write_color_to_buffer( pixel, ray_color( &r ) );
 
                         // Move to next pixel
                         pixel += channels;
@@ -62,7 +115,7 @@ main( void )
     //--------------------------------------------------------------------------------------
     {
         const char * filename = "output.png";
-        if( !stbi_write_png( filename, image_width, image_height, channels, image_data, image_width * channels ) )
+        if( !stbi_write_png( filename, IMAGE_WIDTH, image_height, channels, image_data, IMAGE_WIDTH * channels ) )
             {
                 fprintf( stderr, "Failed to write output image\n" );
                 free( image_data );
