@@ -31,36 +31,38 @@ hit_sphere( const point3 * ct, double r, const ray * ray )
     //   a               b                 c
     //
     vec3   oc           = vec3_sub( *ct, ray_origin( ray ) );
-    double a            = vec3_dot( ray_direction( ray ), ray_direction( ray ) );
-    double b            = -2.0 * vec3_dot( ray_direction( ray ), oc );
-    double c            = vec3_dot( oc, oc ) - r * r;
-    double discriminant = b * b - 4 * a * c;
+    double a            = vec3_length_squared( ray_direction( ray ) );
+    double h            = vec3_dot( ray_direction( ray ), oc );
+    double c            = vec3_length_squared( oc ) - ( r * r );
+    double discriminant = ( h * h ) - ( a * c );
 
     if( discriminant < 0 )
         return -1.0;
     else
-        return ( -b - sqrt( discriminant ) ) / ( 2.0 * a );
+        return ( h - sqrt( discriminant ) ) / a;
 }
 
 color
 ray_color( const ray * r )
 {
     // Sphere
-    point3 sphere_center = vec3_new( 0.0, 0.0, -1.0 );
-    double t             = hit_sphere( &sphere_center, 0.5, r );
-    if( t > 0.0 )
-        {
-            vec3 N = vec3_normalize( vec3_sub( ray_at( r, t ), (vec3) { 0.0, 0.0, -1.0 } ) );
-            return vec3_mul( (color) { N.x + 1, N.y + 1, N.z + 1 }, 0.5 );
-        }
+    {
+        point3 sphere_center = vec3_new( 0.0, 0.0, -1.0 );
+        double t             = hit_sphere( &sphere_center, 0.5, r );
+        if( t > 0.0 )
+            {
+                // Return sphere surface normal
+                vec3 N = vec3_normalize( vec3_sub( ray_at( r, t ), (vec3) { 0.0, 0.0, -1.0 } ) );
+                return vec3_mul( (color) { N.x + 1, N.y + 1, N.z + 1 }, 0.5 );
+            }
+    }
 
     // Background
-    vec3   unit_direction = vec3_normalize( ray_direction( r ) );
-    double a              = 0.5 * ( unit_direction.y + 1.0 );
-    return vec3_add(
-        vec3_mul( (color) { 1.0, 1.0, 1.0 }, 1.0 - a ),
-        vec3_mul( (color) { 0.5, 0.7, 1.0 }, a )
-    );
+    {
+        vec3   unit_direction = vec3_normalize( ray_direction( r ) );
+        double a              = 0.5 * ( unit_direction.y + 1.0 );
+        return vec3_add( vec3_mul( (color) { 1.0, 1.0, 1.0 }, 1.0 - a ), vec3_mul( (color) { 0.5, 0.7, 1.0 }, a ) );
+    }
 }
 
 int
