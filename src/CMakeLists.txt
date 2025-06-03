@@ -33,7 +33,12 @@ add_executable(${PROJECT_NAME}
 )
 
 # Link libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC ${LINK_DEPS})
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC
+        ${LINK_DEPS}
+    PRIVATE
+        $<$<PLATFORM_ID:Linux>:m;pthread>
+)
 
 #--------------------------------------------------------------------
 # Include Directories
