@@ -11,7 +11,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Include the new C99 hittable and sphere headers
+#include "hittable.h"      /* hit_record, hittable interface */
+#include "hittable_list.h" /* hittable_list */
+#include "sphere.h"        /* sphere */
+
 #include "hittable.h"
 #include "sphere.h"
 
@@ -27,39 +30,26 @@
 #define CLAMP( x, lower, upper ) ( MIN( ( upper ), MAX( ( x ), ( lower ) ) ) )
 
 color
-ray_color( const ray * r )
+ray_color( const ray * r, const hittable * world )
 {
-    // Scene
-    {
-        hit_record rec;
+    hit_record rec;
 
-        // Sphere
-        sphere sphere;
-        point3 sphere_center = vec3_new( 0.0, 0.0, -1.0 );
-
-        // Initialize the sphere object
-        sphere_init( &sphere, sphere_center, 0.5 );
-
-        // Check for hits with the sphere using the hittable interface
-        // t_min = 0.001 to avoid shadow acne (self-intersection at the ray's origin)
-        // t_max = INFINITY to consider hits at any distance along the ray
-        if( sphere.base.hit( (hittable *)&sphere, r, 0.001, (double)INFINITY, &rec ) )
-            {
-                // The ray hit the sphere
-                return vec3_mul( (color) { rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0 }, 0.5 );
-            }
-    }
+    // Check for hits
+    // t_min = 0.001 to avoid shadow acne
+    // t_max = INFINITY to consider hits at any distance
+    if( world->hit( world, r, 0.001, INFINITY, &rec ) )
+        {
+            // Already oriented correctly by set_face_normal.
+            return vec3_mul( (color) { rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0 }, 0.5 );
+        }
 
     // Background gradient
-    {
-        vec3   unit_direction = vec3_normalize( ray_direction( r ) );
-        double a              = 0.5 * ( unit_direction.y + 1.0 ); // LERP factor based on y-component of ray direction
+    vec3   unit_direction = vec3_normalize( ray_direction( r ) );
+    double a              = 0.5 * ( unit_direction.y + 1.0 );
 
-        // Lerp between white and blue
-        color white           = vec3_new( 1.0, 1.0, 1.0 );
-        color sky_blue        = vec3_new( 0.5, 0.7, 1.0 );
-        return vec3_add( vec3_mul( white, 1.0 - a ), vec3_mul( sky_blue, a ) );
-    }
+    color white           = vec3_new( 1.0, 1.0, 1.0 );
+    color sky_blue        = vec3_new( 0.5, 0.7, 1.0 );
+    return vec3_add( vec3_mul( white, 1.0 - a ), vec3_mul( sky_blue, a ) );
 }
 
 int
@@ -80,7 +70,30 @@ main( void )
             return EXIT_FAILURE;
         }
 
+    // World setup
+    //--------------------------------------------------------------------------------------
+    hittable_list world;
+    hittable_list_init( &world, 4 );
+
+    // Spheres
+    sphere sphere_gnd; // Ground sphere
+    sphere_init( &sphere_gnd, vec3_new( 0.0, -100.5, -1.0 ), 100.0 );
+    hittable_list_add( &world, (hittable *)&sphere_gnd );
+
+    sphere sphere_ctr; // Center sphere
+    sphere_init( &sphere_ctr, vec3_new( 0.0, 0.0, -1.0 ), 0.5 );
+    hittable_list_add( &world, (hittable *)&sphere_ctr );
+
+    sphere sphere_left; // Left sphere
+    sphere_init( &sphere_left, vec3_new( -1.0, 0.0, -1.0 ), 0.5 );
+    hittable_list_add( &world, (hittable *)&sphere_left );
+
+    sphere sphere_right; // Right sphere
+    sphere_init( &sphere_right, vec3_new( 1.0, 0.0, -1.0 ), 0.5 );
+    hittable_list_add( &world, (hittable *)&sphere_right );
+
     // Camera
+    //--------------------------------------------------------------------------------------
     double focal_length    = 1.0;
     double viewport_height = 2.0;
     double viewport_width  = viewport_height * ( (double)IMAGE_WIDTH / image_height );
@@ -133,9 +146,9 @@ main( void )
                         ray  r           = ray_create( camera_center, r_direction );
 
                         // Get color for this ray
-                        color pixel_c    = ray_color( &r );
+                        color pixel_c    = ray_color( &r, (hittable *)&world );
 
-                        // Write color to image buffer (write_color_to_buffer is defined in color.h/c)
+                        // Write color to image buffer
                         write_color_to_buffer( pixel, pixel_c );
 
                         pixel += CHANNELS; // Move to the next pixel in the buffer
