@@ -62,28 +62,28 @@ This project uses [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) for depend
 
 Current dependencies:
 
--   None (pure C99 implementation)
+- None (pure C99 implementation)
 
 ## Performance Notes
 
--   The raytracer is CPU-intensive and currently single-threaded.
--   Rendering times depend on image resolution and sample count.
--   For faster previews, reduce `SAMPLES_PER_PIXEL` and image dimensions
--   Release builds are significantly faster than debug builds
+- The raytracer is CPU-intensive and currently single-threaded.
+- Rendering times depend on image resolution and sample count.
+- For faster previews, reduce `SAMPLES_PER_PIXEL` and image dimensions
+- Release builds are significantly faster than debug builds
 
 ## Contributing
 
-1.  Fork the repository
-2.  Create a feature branch (`git checkout -b feature/amazing-feature`)
-3.  Commit your changes (`git commit -m 'Add amazing feature'`)
-4.  Push to the branch (`git push origin feature/amazing-feature`)
-5.  Open a Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## Learning Resources
 
--   [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) - The original book
--   [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html) - Follow-up book
--   [Ray Tracing: The Rest of Your Life](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html) - Advanced techniques
+- [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html) - The original book
+- [Ray Tracing: The Next Week](https://raytracing.github.io/books/RayTracingTheNextWeek.html) - Follow-up book
+- [Ray Tracing: The Rest of Your Life](https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html) - Advanced techniques
 
 ## License
 
@@ -91,7 +91,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
--   **Peter Shirley** for the excellent "Ray Tracing in One Weekend" book series
--   **The raytracing community** for continuous inspiration and knowledge sharing
--   **Contributors** who help improve this implementation
+- **Peter Shirley** for the excellent "Ray Tracing in One Weekend" book series
+- **The raytracing community** for continuous inspiration and knowledge sharing
+- **Contributors** who help improve this implementation
 
