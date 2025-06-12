@@ -1,6 +1,9 @@
-#include <float.h>
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
+#include <float.h>
+#include <time.h>  /* time */
 
 #include "color.h" /* typedef vec3 color, write_color_to_buffer */
 #include "ray.h"   /* ray struct, ray_create, ray_origin, ray_direction, ray_at */
@@ -18,10 +21,14 @@
 #include "hittable.h"
 #include "sphere.h"
 
+#include "camera.h"
+
 // Constants
 #define ASPECT_RATIO             ( 16.0 / 9.0 )
 #define IMAGE_WIDTH              800
 #define CHANNELS                 3
+#define SAMPLES_PER_PIXEL        100 // For anti-aliasing
+#define MAX_DEPTH                50  // Ray bounce limit
 
 // Macros
 #define LERP( a, b, t )          ( ( a ) + ( ( b ) - ( a ) ) * ( t ) )
@@ -30,9 +37,14 @@
 #define CLAMP( x, lower, upper ) ( MIN( ( upper ), MAX( ( x ), ( lower ) ) ) )
 
 color
-ray_color( const ray * r, const hittable * world )
+ray_color( const ray * r, const hittable * world, int depth )
 {
-    hit_record rec;
+    hit_record rec = { 0 };
+
+    if( depth <= 0 )
+        {
+            return vec3_new( 0, 0, 0 ); // Ray bounce limit reached
+        }
 
     // Check for hits
     // t_min = 0.001 to avoid shadow acne
@@ -55,6 +67,8 @@ ray_color( const ray * r, const hittable * world )
 int
 main( void )
 {
+    srand( time( NULL ) );
+
     // Initialization
     //--------------------------------------------------------------------------------------
     // Image dimensions
@@ -94,35 +108,16 @@ main( void )
 
     // Camera
     //--------------------------------------------------------------------------------------
-    double focal_length    = 1.0;
-    double viewport_height = 2.0;
-    double viewport_width  = viewport_height * ( (double)IMAGE_WIDTH / image_height );
-    point3 camera_center   = vec3_new( 0.0, 0.0, 0.0 );
+    camera cam;
+    {
+        point3 position      = vec3_new( -2, 2, 1 );
+        point3 lookat        = vec3_new( 0, 0, -1 );
+        vec3   vup           = vec3_new( 0, 1, 0 );
+        double dist_to_focus = vec3_length( vec3_sub( position, lookat ) );
+        double aperture      = 0;
 
-    // Viewport edge vectors
-    vec3 viewport_u        = vec3_new( viewport_width, 0.0, 0.0 );   // Horizontal edge
-    vec3 viewport_v        = vec3_new( 0.0, -viewport_height, 0.0 ); // Vertical edge (downward)
-
-    // Pixel-to-pixel step vectors
-    vec3 pixel_delta_u     = vec3_div( viewport_u, IMAGE_WIDTH );  // Horizontal step
-    vec3 pixel_delta_v     = vec3_div( viewport_v, image_height ); // Vertical step
-
-    // Calculate viewport upper-left corner
-    vec3 focal_vector = vec3_new( 0.0, 0.0, focal_length ); // Vector from camera to focal plane along view direction
-
-    vec3   viewport_center_offset = vec3_new( 0.0, 0.0, -focal_length ); // Assuming camera at origin looks along -Z
-    point3 viewport_plane_center  = vec3_add( camera_center, viewport_center_offset );
-
-    vec3 half_viewport_u          = vec3_div( viewport_u, 2.0 );
-    vec3 half_viewport_v          = vec3_div( viewport_v, 2.0 ); // Note: viewport_v is already negative Y
-
-    // Upper-left corner of the viewport plane
-    vec3 viewport_upper_left      = vec3_sub(
-        vec3_sub( vec3_add( camera_center, vec3_new( 0, 0, -focal_length ) ), half_viewport_u ), half_viewport_v );
-
-    // First pixel center location (pixel [0,0])
-    vec3 half_pixel_step = vec3_mul( vec3_add( pixel_delta_u, pixel_delta_v ), 0.5 );
-    vec3 pixel00_loc     = vec3_add( viewport_upper_left, half_pixel_step );
+        camera_init( &cam, ASPECT_RATIO, 20.0, position, lookat, vup, aperture, dist_to_focus );
+    }
 
     // Draw
     //--------------------------------------------------------------------------------------
@@ -135,34 +130,30 @@ main( void )
 
                 for( int i = 0; i < IMAGE_WIDTH; ++i )
                     {
-                        // Calculate current pixel's center on the viewport
-                        vec3   pixel_center_offset_u = vec3_mul( pixel_delta_u, (double)i );
-                        vec3   pixel_center_offset_v = vec3_mul( pixel_delta_v, (double)j );
-                        point3 pixel_center
-                            = vec3_add( vec3_add( pixel00_loc, pixel_center_offset_u ), pixel_center_offset_v );
-
-                        // Calculate ray direction from camera center to pixel center
-                        vec3 r_direction = vec3_sub( pixel_center, camera_center );
-                        ray  r           = ray_create( camera_center, r_direction );
-
-                        // Get color for this ray
-                        color pixel_c    = ray_color( &r, (hittable *)&world );
-
-                        // Write color to image buffer
-                        write_color_to_buffer( pixel, pixel_c );
-
-                        pixel += CHANNELS; // Move to the next pixel in the buffer
+                        color pixel_color = vec3_new( 0, 0, 0 );
+                        for( int s = 0; s < SAMPLES_PER_PIXEL; ++s )
+                            {
+                                double u    = (double)( i + random_double_camera() ) / ( IMAGE_WIDTH - 1 );
+                                double v    = (double)( j + random_double_camera() ) / ( image_height - 1 );
+                                ray    r    = camera_get_ray( &cam, u, v );
+                                pixel_color = vec3_add( pixel_color, ray_color( &r, (hittable *)&world, MAX_DEPTH ) );
+                            }
+                        write_color_to_buffer( pixel, pixel_color, SAMPLES_PER_PIXEL );
+                        pixel += CHANNELS;
                     }
             }
 
-        fprintf( stderr, "\rDone.                                       \n" );
+        fprintf( stderr, "\rDone.                                                \n" );
     }
 
     // Output
     //--------------------------------------------------------------------------------------
     {
-        const char * filename = "output.png";
-        if( !stbi_write_png( filename, IMAGE_WIDTH, image_height, CHANNELS, image_data, IMAGE_WIDTH * CHANNELS ) )
+        // Set compression to 0 for uncompressed TGA
+        stbi_write_tga_with_rle = 0;
+
+        const char * filename   = "output.tga";
+        if( !stbi_write_tga( filename, IMAGE_WIDTH, image_height, CHANNELS, image_data ) )
             {
                 fprintf( stderr, "Failed to write output image\n" );
                 free( image_data );

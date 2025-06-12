@@ -5,6 +5,7 @@ set(INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 
 list(APPEND PUBLIC_HEADER_FILES
+    ${INCLUDE_DIR}/camera.h
     ${INCLUDE_DIR}/color.h
     ${INCLUDE_DIR}/hittable.h
     ${INCLUDE_DIR}/hittable_list.h
@@ -18,6 +19,7 @@ list(APPEND PRIVATE_HEADER_FILES
 
 list(APPEND SOURCE_FILES
   # Modules
+  ${SOURCE_DIR}/camera.c
   ${SOURCE_DIR}/hittable_list.c
   ${SOURCE_DIR}/main.c
   ${SOURCE_DIR}/sphere.c

@@ -7,6 +7,14 @@
 // Color is represented as a vec3 with RGB components
 typedef vec3 color;
 
+static inline double
+clamp( double x, double min_val, double max_val )
+{
+    if( x < min_val ) return min_val;
+    if( x > max_val ) return max_val;
+    return x;
+}
+
 // Interval structure for clamping
 typedef struct
 {
@@ -35,23 +43,27 @@ linear_to_gamma( double linear_component )
 }
 
 static inline void
-write_color_to_buffer( unsigned char * pBuffer, const color pixel_color )
+write_color_to_buffer( unsigned char * pBuffer, const color pixel_c, int samples_per_pixel )
 {
-    double r                        = linear_to_gamma( pixel_color.x );
-    double g                        = linear_to_gamma( pixel_color.y );
-    double b                        = linear_to_gamma( pixel_color.z );
+    double r     = pixel_c.x;
+    double g     = pixel_c.y;
+    double b     = pixel_c.z;
 
-    // Translate the [0,1] component values to the byte range [0,255].
-    static const interval intensity = { 0.000, 0.999 };
-    int                   rbyte     = (int)( 256 * interval_clamp( intensity, r ) );
-    int                   gbyte     = (int)( 256 * interval_clamp( intensity, g ) );
-    int                   bbyte     = (int)( 256 * interval_clamp( intensity, b ) );
+    // Divide the color by the number of samples for anti-aliasing
+    double scale = 1.0 / samples_per_pixel;
+    r *= scale;
+    g *= scale;
+    b *= scale;
 
-    // Write out the pixel color components to buffer
-    pBuffer[0]                      = (unsigned char)rbyte; // R
-    pBuffer[1]                      = (unsigned char)gbyte; // G
-    pBuffer[2]                      = (unsigned char)bbyte; // B
+    // Apply gamma correction (gamma=2.0). Transforms the color to linear space.
+    r          = sqrt( r );
+    g          = sqrt( g );
+    b          = sqrt( b );
+
+    // Translate the [0,1] component values to the byte range [0,255] and clamp.
+    pBuffer[0] = (unsigned char)( 256 * clamp( r, 0.0, 0.999 ) );
+    pBuffer[1] = (unsigned char)( 256 * clamp( g, 0.0, 0.999 ) );
+    pBuffer[2] = (unsigned char)( 256 * clamp( b, 0.0, 0.999 ) );
 }
 
 #endif
-
