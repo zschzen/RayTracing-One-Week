@@ -62,7 +62,8 @@ This project uses [CPM.cmake](https://github.com/cpm-cmake/CPM.cmake) for depend
 
 Current dependencies:
 
-- None (pure C99 implementation)
+- [stb_image.h](/external/stb_image.h), v2.30
+- [stb_image_write.h](stb_image_write.h), v1.16
 
 ## Performance Notes
 
