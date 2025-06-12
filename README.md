@@ -1,5 +1,8 @@
 # RayTracing-One-Week
 
+[![Build](https://github.com/zschzen/RayTracing-One-Week/actions/workflows/build.yml/badge.svg)](https://github.com/zschzen/RayTracing-One-Week/actions/workflows/build.yml)
+
+
 A C99 implementation of the ray tracer from Peter Shirley's excellent book [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html).
 
 ## Features
