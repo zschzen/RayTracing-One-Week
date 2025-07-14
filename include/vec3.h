@@ -189,6 +189,16 @@ vec3_reflect( vec3 v, vec3 n )
 }
 
 static inline vec3
+vec3_refract( const vec3 uv, const vec3 n, double etai_over_etat )
+{
+    vec3   neg_uv         = vec3_negate( uv );
+    double cos_theta      = fmin( vec3_dot( neg_uv, n ), 1.0 );
+    vec3   r_out_perp     = vec3_mul( vec3_add( uv, vec3_mul( n, cos_theta ) ), etai_over_etat );
+    vec3   r_out_parallel = vec3_mul( n, -sqrt( fabs( 1.0 - vec3_length_squared( r_out_perp ) ) ) );
+    return vec3_add( r_out_perp, r_out_parallel );
+}
+
+static inline vec3
 vec3_project( vec3 v, vec3 onto )
 {
     double dot_product = vec3_dot( v, onto );
