@@ -27,19 +27,19 @@ A C99 implementation of the ray tracer from Peter Shirley's excellent book [Ray 
 git clone https://github.com/zschzen/RayTracing-One-Week
 cd RayTracing-One-Week
 
-# Create build directory
-mkdir build && cd build
+# Configure from the project root
+cmake -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DUSE_CCACHE=ON
 
-# Configure and build
-cmake ..
-make
-
+# Build
+cmake --build build
 ```
 
 ### Running
 
 ```bash
-# Generate a `output.tga` image file
+# Generate a `output.png` image file
 ./RayTracing
 ```
 
@@ -47,14 +47,18 @@ make
 
 Following the book's chapters:
 
-- [x] **Chapter 1-2**: Basic PPM output and background gradient
-- [x] **Chapter 3-4**: Ray casting and sphere intersection
-- [x] **Chapter 5-6**: Surface normals and multiple objects
-- [ ] **Chapter 7-8**: Antialiasing and diffuse materials
-- [ ] **Chapter 9-10**: Metal materials and fuzzy reflection
-- [ ] **Chapter 11-12**: Dielectric materials and refraction
-- [x] **Chapter 13**: Positionable camera
-- [x] **Chapter 14**: Depth of field
+* [x] **Chapter 2**: Output an Image
+* [x] **Chapter 3**: The vec3 Class
+* [x] **Chapter 4**: Rays, a Simple Camera, and Background
+* [x] **Chapter 5**: Adding a Sphere
+* [x] **Chapter 6**: Surface Normals and Multiple Objects
+* [x] **Chapter 7**: Moving Camera Code Into Its Own Class
+* [x] **Chapter 8**: Antialiasing
+* [x] **Chapter 9**: Diffuse Materials
+* [x] **Chapter 10**: Metal
+* [x] **Chapter 11**: Dielectrics
+* [x] **Chapter 12**: Positionable camera
+* [x] **Chapter 13**: Defocus Blur
 
 ## Dependencies
 
@@ -95,4 +99,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Peter Shirley** for the excellent "Ray Tracing in One Weekend" book series
 - **The raytracing community** for continuous inspiration and knowledge sharing
 - **Contributors** who help improve this implementation
+
 
