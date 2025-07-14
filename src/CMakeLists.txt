@@ -7,9 +7,14 @@ set(SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 list(APPEND PUBLIC_HEADER_FILES
     ${INCLUDE_DIR}/camera.h
     ${INCLUDE_DIR}/color.h
+    ${INCLUDE_DIR}/dielectric.h
     ${INCLUDE_DIR}/hittable.h
     ${INCLUDE_DIR}/hittable_list.h
+    ${INCLUDE_DIR}/lambertian.h
+    ${INCLUDE_DIR}/material.h
+    ${INCLUDE_DIR}/metal.h
     ${INCLUDE_DIR}/ray.h
+    ${INCLUDE_DIR}/rtweekend.h
     ${INCLUDE_DIR}/sphere.h
     ${INCLUDE_DIR}/vec3.h
 )
@@ -20,8 +25,11 @@ list(APPEND PRIVATE_HEADER_FILES
 list(APPEND SOURCE_FILES
   # Modules
   ${SOURCE_DIR}/camera.c
+  ${SOURCE_DIR}/dielectric.c
   ${SOURCE_DIR}/hittable_list.c
+  ${SOURCE_DIR}/lambertian.c
   ${SOURCE_DIR}/main.c
+  ${SOURCE_DIR}/metal.c
   ${SOURCE_DIR}/sphere.c
 )
 

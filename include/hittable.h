@@ -1,9 +1,7 @@
 #ifndef HITTABLE_H
 #define HITTABLE_H
 
-#include "ray.h"  /* ray, _direction */
-#include "vec3.h" /* vec3, _dot, _mul */
-#include <stdbool.h>
+#include "material.h"
 
 // Forward declaration
 struct hittable_s;
@@ -11,11 +9,11 @@ struct hittable_s;
 // Store intersection information of a ray-object
 typedef struct hit_record_s
 {
-    point3 p;          // Intersection point
-    vec3   normal;     // Surface normal, oriented against the incident ray
-    double t;          // Ray parameter t at intersection
-    bool   front_face; // True if ray hits the front face, false if it hits the back face
-    // void* material; // Pointer to the material of the hit object
+    point3     p;          // Intersection point
+    vec3       normal;     // Surface normal, oriented against the incident ray
+    double     t;          // Ray parameter t at intersection
+    material * mat_ptr;    // Pointer to the material of the hit object
+    bool       front_face; // True if ray hits the front face, false if it hits the back face
 } hit_record;
 
 // Hit function pointer
@@ -25,7 +23,8 @@ typedef bool ( *hit_fn )( const struct hittable_s * object, const ray * r, doubl
 // The "hittable" interface struct
 typedef struct hittable_s
 {
-    hit_fn hit;
+    hit_fn     hit;
+    material * mat_ptr; // Pointer to the material of the hit object
 } hittable;
 
 // Set the hit record's normal vector and front_face flag

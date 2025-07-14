@@ -1,6 +1,7 @@
 #include "hittable_list.h"
+#include "hittable.h"
 
-// Default intial capacity
+// Default initial capacity
 #define DEFAULT_CAPACITY 4
 
 void
@@ -11,8 +12,8 @@ hittable_list_init( hittable_list * list, int initial_capacity )
     list->base.hit = hittable_list_hit; // Set the hit function
     list->count    = 0;
     list->capacity = ( initial_capacity > 0 ) ? initial_capacity : DEFAULT_CAPACITY;
-
     list->objects  = (hittable **)malloc( list->capacity * sizeof( hittable * ) );
+
     if( NULL == list->objects )
         {
             fprintf( stderr, "ERROR: Failed to allocate memory for hittable_list objects array.\n" );
@@ -66,6 +67,27 @@ hittable_list_clear( hittable_list * list )
 {
     if( NULL == list ) return;
 
+    for( int i = 0; i < list->count; ++i )
+        {
+            if( list->objects[i] )
+                {
+                    // Get hittable object
+                    hittable * obj = (hittable *)list->objects[i];
+
+                    // Free the material if it exists
+                    if( obj->mat_ptr )
+                        {
+                            free( obj->mat_ptr );
+                            obj->mat_ptr = NULL;
+                        }
+
+                    // Free the object itself
+                    free( obj );
+                    list->objects[i] = NULL;
+                }
+        }
+
+    // Free the objects array
     free( list->objects );
     list->objects  = NULL;
     list->count    = 0;
@@ -77,10 +99,9 @@ hittable_list_hit( const hittable * list_hittable, const ray * r, double ray_tmi
 {
     // Cast the generic hittable to hittable_list
     const hittable_list * list = (const hittable_list *)list_hittable;
-
-    hit_record temp_rec;
-    bool       hit_anything   = false;
-    double     closest_so_far = ray_tmax; // Maximum allowed t for intersection
+    hit_record            temp_rec;
+    bool                  hit_anything   = false;
+    double                closest_so_far = ray_tmax; // Maximum allowed t for intersection
 
     for( int i = 0; i < list->count; ++i )
         {
