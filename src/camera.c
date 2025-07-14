@@ -1,24 +1,17 @@
 #include "camera.h"
-#include <math.h>  /* tan, M_PI */
-
-#include "color.h" /* typedef vec3 color, write_color_to_buffer */
+#include "color.h"
 #include "hittable.h"
+#include "material.h"
+#include "rtweekend.h"
 #include <float.h>
+#include <math.h> /* tan, M_PI */
 #include <stdio.h>
-
-#ifndef M_PI
-#    define M_PI 3.14159265358979323846
-#endif
-
-// Macros
-#define MAX( a, b ) ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
-#define CHANNELS    3 // TODO: Move it to another place, as `main.c` also has it
 
 // Computes the color for a given ray
 static color
 ray_color( const ray * r, const hittable * world, int depth )
 {
-    hit_record rec = { 0 };
+    hit_record rec;
 
     if( depth <= 0 )
         {
@@ -27,11 +20,15 @@ ray_color( const ray * r, const hittable * world, int depth )
 
     // Check for hits
     // t_min = 0.001 to avoid shadow acne
-    // t_max = INFINITY to consider hits at any distance
-    if( world->hit( world, r, 0.001, INFINITY, &rec ) )
+    if( world->hit( world, r, 0.001, RT_INFINITY, &rec ) )
         {
-            // Already oriented correctly by set_face_normal.
-            return vec3_mul( (color) { rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0 }, 0.5 );
+            ray   scattered;
+            color attenuation;
+            if( rec.mat_ptr && rec.mat_ptr->scatter( rec.mat_ptr, r, &rec, &attenuation, &scattered ) )
+                {
+                    return vec3_mul_vec( attenuation, ray_color( &scattered, world, depth - 1 ) );
+                }
+            return vec3_new( 0, 0, 0 ); // Ray was absorbed
         }
 
     // Background gradient
@@ -52,7 +49,6 @@ camera_init( camera * cam, double aspect_ratio, double vertical_fov_deg, point3 
 {
     if( !cam ) return;
 
-    // Store camera parameters
     cam->aspect_ratio      = aspect_ratio;
     cam->vertical_fov_deg  = vertical_fov_deg;
     cam->position          = camera_pos;
@@ -61,44 +57,33 @@ camera_init( camera * cam, double aspect_ratio, double vertical_fov_deg, point3 
     cam->aperture          = aperture_diameter;
     cam->focal_distance    = focus_distance;
     cam->lens_radius       = cam->aperture / 2.0;
-    cam->origin            = cam->position;
 
-    // --- Render settings ---
     cam->image_width       = image_width;
     cam->samples_per_pixel = samples_per_pixel;
     cam->max_depth         = max_depth;
-    cam->image_height      = (int)( cam->image_width / cam->aspect_ratio );
-    cam->image_height      = MAX( cam->image_height, 1 );
-    // --- End render settings ---
+    cam->image_height      = (int)( image_width / aspect_ratio );
+    cam->image_height      = RT_MAX( cam->image_height, 1 );
 
-    // Calculate viewport dimensions
-    double theta           = ( cam->vertical_fov_deg * M_PI ) / 180.0; // Convert to radians
+    double theta           = vertical_fov_deg * RT_DEG2RAD;
     double h               = tan( theta / 2.0 );
-    double viewport_height = 2.0 * h;
-    double viewport_width  = cam->aspect_ratio * viewport_height;
+    double viewport_h      = 2.0 * h;
+    double viewport_w      = aspect_ratio * viewport_h;
 
-    // Calculate camera's orthonormal basis vectors
-    // forward points opposite to viewing direction (from camera toward target)
-    cam->forward           = vec3_normalize( vec3_sub( cam->target, cam->position ) );
-    // right is perpendicular to forward and world_up
-    cam->right             = vec3_normalize( vec3_cross( cam->forward, cam->world_up ) );
-    // up is perpendicular to forward and right
+    cam->forward           = vec3_normalize( vec3_sub( target_point, camera_pos ) );
+    cam->right             = vec3_normalize( vec3_cross( cam->forward, world_up_dir ) );
     cam->up                = vec3_cross( cam->right, cam->forward );
 
-    // Calculate viewport vectors (scaled by focal distance)
-    cam->viewport_width    = vec3_mul( cam->right, viewport_width * cam->focal_distance );
-    cam->viewport_height   = vec3_mul( cam->up, viewport_height * cam->focal_distance );
+    cam->viewport_width    = vec3_mul( cam->right, viewport_w * focus_distance );
+    cam->viewport_height   = vec3_mul( cam->up, viewport_h * focus_distance );
 
-    // Calculate viewport origin (upper-left corner)
     vec3 half_width        = vec3_div( cam->viewport_width, 2.0 );
     vec3 half_height       = vec3_div( cam->viewport_height, 2.0 );
-    vec3 focus_center      = vec3_add( cam->origin, vec3_mul( cam->forward, cam->focal_distance ) );
+    vec3 focus_center      = vec3_add( camera_pos, vec3_mul( cam->forward, focus_distance ) );
 
-    cam->viewport_origin   = vec3_sub( focus_center, half_width );          // Move left
-    cam->viewport_origin   = vec3_add( cam->viewport_origin, half_height ); // Move up
+    cam->viewport_origin   = vec3_sub( focus_center, half_width );
+    cam->viewport_origin   = vec3_add( cam->viewport_origin, half_height );
 }
 
-// Renders the entire scene to the provided image data buffer
 void
 camera_render( const camera * cam, const struct hittable * world, unsigned char * image_data )
 {
@@ -113,21 +98,19 @@ camera_render( const camera * cam, const struct hittable * world, unsigned char 
                     color pixel_color = vec3_new( 0, 0, 0 );
                     for( int s = 0; s < cam->samples_per_pixel; ++s )
                         {
-                            double u    = (double)( i + random_double_camera() ) / ( cam->image_width - 1 );
-                            double v    = (double)( j + random_double_camera() ) / ( cam->image_height - 1 );
+                            double u    = (double)( i + random_double() ) / ( cam->image_width - 1 );
+                            double v    = (double)( j + random_double() ) / ( cam->image_height - 1 );
                             ray    r    = camera_get_ray( cam, u, v );
                             pixel_color = vec3_add( pixel_color, ray_color( &r, (hittable *)world, cam->max_depth ) );
                         }
                     write_color_to_buffer( pixel, pixel_color, cam->samples_per_pixel );
-                    pixel += CHANNELS;
+                    pixel += RT_IMAGE_DATA_CHANNELS;
                 }
         }
 
-    fprintf( stderr, "\rDone.                                                          \n" );
+    fprintf( stderr, "\rDone.                                                      \n" );
 }
 
-// Generates a ray from the camera through a point (s, t) on the image plane.
-// s and t are normalized pixel coordinates (0 to 1, where (0,0) is top-left).
 ray
 camera_get_ray( const camera * cam, double s, double t )
 {
@@ -148,7 +131,7 @@ camera_get_ray( const camera * cam, double s, double t )
     // Apply depth of field by sampling random point on lens aperture
     vec3   lens_sample     = vec3_mul( random_in_unit_disk(), cam->lens_radius );
     vec3   lens_offset     = vec3_add( vec3_mul( cam->right, lens_sample.x ), vec3_mul( cam->up, lens_sample.y ) );
-    point3 ray_start       = vec3_add( cam->origin, lens_offset );
+    point3 ray_start       = vec3_add( cam->position, lens_offset );
 
     vec3 ray_dir           = vec3_sub( viewport_point, ray_start );
 

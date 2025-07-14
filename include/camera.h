@@ -1,10 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "ray.h"    /* ray struct, ray_create, ray_origin, ray_direction, ray_at */
-#include "vec3.h"
-
-#include <stdlib.h> /* rand, RAND_MAX */
+#include "ray.h" /* ray struct, ray_create, ray_origin, ray_direction, ray_at */
 
 // Forward declaration
 struct hittable;
@@ -28,7 +25,6 @@ typedef struct
     int max_depth;
 
     // --- Calculated ---
-    point3 origin;             // Camera position (copy of position for convenience)
     vec3   right, up, forward; // Orthonormal basis for camera orientation (right, up, -direction)
     vec3   viewport_width;     // Horizontal extent of viewport in world space
     vec3   viewport_height;    // Vertical extent of viewport in world space
@@ -62,26 +58,4 @@ void camera_render( const camera * cam, const struct hittable * world, unsigned 
 // s and t are normalized pixel coordinates (0 to 1, where (0,0) is top-left).
 ray camera_get_ray( const camera * cam, double s, double t );
 
-// Random double in [0,1)
-static inline double
-random_double_camera()
-{
-    return rand() / ( RAND_MAX + 1.0 );
-}
-
-// Generates a random point in a unit disk.
-static inline vec3
-random_in_unit_disk()
-{
-    while( true )
-        {
-            vec3 p = vec3_new( random_double_camera() * 2.0 - 1.0, random_double_camera() * 2.0 - 1.0, 0.0 );
-            if( vec3_length_squared( p ) < 1.0 )
-                {
-                    return p;
-                }
-        }
-}
-
 #endif // CAMERA_H
-
