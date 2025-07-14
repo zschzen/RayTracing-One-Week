@@ -36,9 +36,7 @@ message(STATUS "> CPM.cmake")
 include(cmake/CPM.cmake)
 CPMUsePackageLock(package-lock.cmake)
 
-if(USE_CCACHE)
-  CPMAddPackage("gh:TheLartians/Ccache.cmake@1.2.5")
-endif()
+include(cmake/tools.cmake)
 
 CPMAddPackage("gh:TheLartians/GroupSourcesByFolder.cmake@1.0")
 
